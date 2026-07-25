@@ -40,7 +40,18 @@ export const AuthPage = () => {
       return;
     }
 
-    setLoading(true);
+    if (mode === "signup") {
+    const hasSpecialCharacter = /[!@#$%^&*(),.?":{}|<>]/.test(form.password);
+
+    if (form.password.length < 5 || !hasSpecialCharacter) {
+      toast.error(
+        "Password must be at least 5 characters long and contain at least one special character."
+      );
+      return;
+    }
+  }
+
+  setLoading(true);
 
     try {
       const endpoint = mode === "signup" ? "/signup" : "/signin";
