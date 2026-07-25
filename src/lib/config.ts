@@ -1,5 +1,4 @@
-const DEFAULT_BACKEND_URL = " ";
-const DEFAULT_WS_URL = " ";
+
 console.log(import.meta.env)
 export const BACKEND_URL =
   "https://ai-interviewer-1xg1.onrender.com"

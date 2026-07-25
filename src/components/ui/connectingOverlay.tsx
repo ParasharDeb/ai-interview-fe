@@ -27,14 +27,14 @@ export function ConnectingOverlay({ open, durationMs = 8000 }: ConnectingOverlay
   const [stageIndex, setStageIndex] = useState(0);
   const [progress, setProgress] = useState(0);
 
-  const bg = isDark ? "#0a0a0c" : "#eceeef";
+  
   const panel = isDark ? "#131316" : "#ffffff";
   const panelAlt = isDark ? "#18181b" : "#f4f4f5";
   const border = isDark ? "#28282d" : "#dcdce0";
   const textPrimary = isDark ? "#f4f4f5" : "#18181b";
   const textMuted = isDark ? "#8b8b93" : "#71717a";
 
-  // Rotate tips every ~2.2s while open
+
   useEffect(() => {
     if (!open) return;
     setTipIndex(0);
