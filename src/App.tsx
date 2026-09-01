@@ -5,6 +5,7 @@ import { Landingpage } from "./components/pages/landingpage"
 import { InformationPage } from "./components/pages/informationPage"
 import { Toaster } from "sonner"
 import { Loader } from "./components/pages/loadercomponent"
+import { Analytics } from "@vercel/analytics/react"
 
 import { AuthPage } from "./components/pages/authPage"
 import InterviewPage from "./components/pages/Interviewpage"
@@ -56,6 +57,7 @@ export function App() {
         </Routes>
       </BrowserRouter>
       <Toaster/>
+      <Analytics />
     </ThemeProvider>
   );
 }
