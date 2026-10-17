@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Moon, Sun, Check, Loader2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Check, Loader2 } from "lucide-react";
 import { useTheme } from "../../lib/theme-context";
 
 type PlanId = "starter" | "pro" | "max";
@@ -20,14 +19,12 @@ const plans: Plan[] = [
 ];
 
 export default function PaymentPage() {
-  const navigate = useNavigate();
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const [selected, setSelected] = useState<PlanId>("pro");
   const [loading, setLoading] = useState(false);
 
   const isDark = theme === "dark";
 
-  const bg = isDark ? "#0a0a0c" : "#eceeef";
   const panel = isDark ? "#131316" : "#ffffff";
   const panelAlt = isDark ? "#18181b" : "#f4f4f5";
   const border = isDark ? "#28282d" : "#dcdce0";
@@ -51,10 +48,7 @@ export default function PaymentPage() {
   }
 
   return (
-    <div
-      style={{ background: bg, color: textPrimary }}
-      className="min-h-screen transition-colors duration-500"
-    >
+    <div>
       <style>{`
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(12px); }
@@ -73,28 +67,7 @@ export default function PaymentPage() {
         .submit-btn:active:not(:disabled) { transform: scale(0.99); }
       `}</style>
 
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-6 sm:px-8">
-        <button
-          onClick={() => navigate(-1)}
-          aria-label="Go back"
-          className="icon-btn flex items-center justify-center"
-          style={{ color: textMuted }}
-        >
-          <ArrowLeft size={18} />
-        </button>
-
-        <button
-          onClick={toggleTheme}
-          aria-label="Toggle theme"
-          className="icon-btn flex items-center justify-center"
-          style={{ color: textMuted }}
-        >
-          {isDark ? <Sun size={18} /> : <Moon size={18} />}
-        </button>
-      </div>
-
-      <main className="mx-auto max-w-4xl px-6 pb-24 pt-8 sm:px-8">
+      <main className="mx-auto max-w-4xl px-6 pb-24 pt-10 sm:px-8">
         {/* Heading */}
         <div className="fade-in mb-14 max-w-lg" style={{ animationDelay: "0.02s" }}>
           <div className="mb-4 flex items-center gap-2">

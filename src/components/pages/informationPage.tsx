@@ -125,7 +125,7 @@ export const InformationPage = () => {
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <motion.button
-                  onClick={() => navigate("/about")}
+                  onClick={() => navigate("/dashboard")}
                   whileHover={{ x: -2 }}
                   whileTap={{ scale: 0.92 }}
                   className="p-2 rounded-lg hover:bg-accent/10 transition-colors duration-200 text-foreground"

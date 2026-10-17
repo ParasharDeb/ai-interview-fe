@@ -105,7 +105,7 @@ useEffect(() => {
         mediaHandler.playAudio(arrayBuffer);
       }
       if(msg.type=="Interview ended"){
-        navigate("/about")
+        navigate("/dashboard")
       }
     },
     onClose: () => {
