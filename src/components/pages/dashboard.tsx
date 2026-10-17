@@ -1,9 +1,25 @@
-import { useEffect, useState } from "react";
-import { ArrowLeft, Moon, Sun, Zap, MessageSquare, Clock, Loader2, ChevronRight, Play } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowLeft,
+  Moon,
+  Sun,
+  Zap,
+  MessageSquare,
+  Clock,
+  Loader2,
+  ChevronRight,
+  Play,
+  TrendingUp,
+  TrendingDown,
+  Trophy,
+  Target,
+  Activity,
+} from "lucide-react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../../lib/theme-context";
 import { BACKEND_URL } from "../../lib/config";
+import { ScoreChart, type ScorePoint } from "../ui/scoreChart";
 
 type TokenUsage = {
   totalTokens: number;
@@ -16,7 +32,17 @@ type InterviewSummary = {
   role: string;
   createdAt: string;
   messageCount: number;
+  status?: "Pre" | "Inprocess" | "Marking" | "Ended";
+  score?: number;
 };
+
+type Range = "all" | "90d" | "30d";
+
+const RANGES: { id: Range; label: string; days?: number }[] = [
+  { id: "30d", label: "30D", days: 30 },
+  { id: "90d", label: "90D", days: 90 },
+  { id: "all", label: "All" },
+];
 
 type InterviewMessage = {
   sender: "me" | "ai";
@@ -36,6 +62,9 @@ export default function AboutPage() {
 
   const [loadingOverview, setLoadingOverview] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [range, setRange] = useState<Range>("all");
+  const [now] = useState(() => Date.now());
+  const transcriptRef = useRef<HTMLDivElement>(null);
 
   const bg = isDark ? "#0a0a0c" : "#eceeef";
   const panel = isDark ? "#131316" : "#ffffff";
@@ -104,6 +133,34 @@ export default function AboutPage() {
     loadMessages();
   }, [selectedId]);
 
+  // Only marked interviews have a meaningful score; oldest first for the chart.
+  const scored = useMemo<ScorePoint[]>(
+    () =>
+      interviews
+        .filter((i) => i.status === "Ended" && typeof i.score === "number")
+        .map((i) => ({ id: i.id, date: i.createdAt, score: i.score as number, label: i.role || "General" }))
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    [interviews],
+  );
+
+  const chartPoints = useMemo(() => {
+    const days = RANGES.find((r) => r.id === range)?.days;
+    if (!days) return scored;
+    const cutoff = now - days * 24 * 60 * 60 * 1000;
+    return scored.filter((p) => new Date(p.date).getTime() >= cutoff);
+  }, [scored, range, now]);
+
+  const average = scored.length ? Math.round(scored.reduce((sum, p) => sum + p.score, 0) / scored.length) : null;
+  const best = scored.length ? scored.reduce((top, p) => (p.score > top.score ? p : top)) : null;
+  const latest = scored.length ? scored[scored.length - 1] : null;
+  const previous = scored.length > 1 ? scored[scored.length - 2] : null;
+  const latestDelta = latest && previous ? latest.score - previous.score : null;
+
+  function selectInterview(id: string) {
+    setSelectedId(id);
+    transcriptRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   const usedPct =
     tokens && tokens.totalTokens > 0 ? Math.min(100, Math.round((tokens.usedTokens / tokens.totalTokens) * 100)) : 0;
 
@@ -118,6 +175,7 @@ export default function AboutPage() {
         .icon-btn { transition: opacity 0.15s ease; }
         .icon-btn:hover { opacity: 0.7; }
         .row-btn { transition: background-color 0.15s ease, border-color 0.15s ease; }
+        .range-btn { transition: background-color 0.15s ease, color 0.15s ease; }
         .start-btn { transition: opacity 0.15s ease, transform 0.1s ease; }
         .start-btn:hover { opacity: 0.88; }
         .start-btn:active { transform: scale(0.98); }
@@ -159,12 +217,12 @@ export default function AboutPage() {
             <div className="mb-3 flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: textPrimary }} />
               <span className="text-[11px] font-medium uppercase tracking-[0.2em]" style={{ color: textMuted }}>
-                Account overview
+                Dashboard
               </span>
             </div>
-            <h1 className="text-3xl font-semibold tracking-tight">About your account</h1>
+            <h1 className="text-3xl font-semibold tracking-tight">Your progress</h1>
             <p className="mt-2 text-sm" style={{ color: textMuted }}>
-              Token usage and every interview transcript, in one place.
+              Scores over time, token usage, and every interview transcript, in one place.
             </p>
           </div>
 
@@ -185,49 +243,154 @@ export default function AboutPage() {
           </div>
         ) : (
           <>
-            {/* Token usage */}
+            {/* Stat tiles */}
+            <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+              {[
+                {
+                  icon: <Target size={15} />,
+                  label: "Average score",
+                  value: average,
+                  sub: `across ${scored.length} scored interview${scored.length === 1 ? "" : "s"}`,
+                },
+                {
+                  icon: <Trophy size={15} />,
+                  label: "Best score",
+                  value: best?.score ?? null,
+                  sub: best ? `${best.label} · ${new Date(best.date).toLocaleDateString()}` : "No scores yet",
+                },
+                {
+                  icon: <Activity size={15} />,
+                  label: "Latest score",
+                  value: latest?.score ?? null,
+                  sub:
+                    latestDelta === null ? (
+                      latest ? "Your first scored interview" : "No scores yet"
+                    ) : (
+                      <span className="flex items-center gap-1">
+                        {latestDelta >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                        {latestDelta > 0 ? "+" : ""}
+                        {latestDelta} vs previous
+                      </span>
+                    ),
+                },
+              ].map((tile, index) => (
+                <div
+                  key={tile.label}
+                  className="fade-in rounded-2xl p-5"
+                  style={{ background: panel, border: `1px solid ${border}`, animationDelay: `${0.04 + index * 0.03}s` }}
+                >
+                  <div className="mb-3 flex items-center gap-2 text-xs font-medium" style={{ color: textMuted }}>
+                    {tile.icon}
+                    {tile.label}
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-semibold tracking-tight tabular-nums">{tile.value ?? "—"}</span>
+                    {tile.value !== null && (
+                      <span className="text-sm" style={{ color: textMuted }}>
+                        /100
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-1.5 truncate text-xs" style={{ color: textMuted }}>
+                    {tile.sub}
+                  </div>
+                </div>
+              ))}
+
+              {/* Token usage */}
+              <div
+                className="fade-in rounded-2xl p-5"
+                style={{ background: panel, border: `1px solid ${border}`, animationDelay: "0.13s" }}
+              >
+                <div className="mb-3 flex items-center gap-2 text-xs font-medium" style={{ color: textMuted }}>
+                  <Zap size={15} />
+                  Tokens left
+                </div>
+                {tokens ? (
+                  <>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-semibold tracking-tight tabular-nums">
+                        {tokens.remainingTokens.toLocaleString()}
+                      </span>
+                      <span className="text-sm" style={{ color: textMuted }}>
+                        /{tokens.totalTokens.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full" style={{ background: panelAlt }}>
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{ width: `${usedPct}%`, background: textPrimary }}
+                      />
+                    </div>
+                    <div className="mt-1.5 text-xs" style={{ color: textMuted }}>
+                      {usedPct}% used
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm" style={{ color: textMuted }}>
+                    No token data.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Score trend */}
             <div
               className="fade-in mb-10 rounded-2xl p-6"
-              style={{ background: panel, border: `1px solid ${border}`, animationDelay: "0.06s" }}
+              style={{ background: panel, border: `1px solid ${border}`, animationDelay: "0.16s" }}
             >
-              <div className="mb-4 flex items-center gap-2">
-                <Zap size={16} style={{ color: textMuted }} />
-                <span className="text-sm font-medium">Tokens</span>
+              <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <TrendingUp size={16} style={{ color: textMuted }} />
+                    <span className="text-sm font-medium">Score trend</span>
+                  </div>
+                  <p className="mt-1 text-xs" style={{ color: textMuted }}>
+                    Every scored interview by date. Click a point to open its transcript.
+                  </p>
+                </div>
+
+                <div className="flex rounded-lg p-0.5" style={{ background: panelAlt }}>
+                  {RANGES.map((r) => (
+                    <button
+                      key={r.id}
+                      onClick={() => setRange(r.id)}
+                      className="range-btn rounded-md px-3 py-1 text-xs font-medium"
+                      style={{
+                        background: range === r.id ? panel : "transparent",
+                        color: range === r.id ? textPrimary : textMuted,
+                        boxShadow: range === r.id ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
+                      }}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {tokens ? (
-                <>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-semibold tracking-tight">
-                      {tokens.remainingTokens.toLocaleString()}
-                    </span>
-                    <span className="text-sm" style={{ color: textMuted }}>
-                      remaining of {tokens.totalTokens.toLocaleString()}
-                    </span>
-                  </div>
-
-                  <div
-                    className="mt-4 h-1.5 w-full overflow-hidden rounded-full"
-                    style={{ background: panelAlt }}
-                  >
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{ width: `${usedPct}%`, background: textPrimary }}
-                    />
-                  </div>
-                  <div className="mt-2 text-xs" style={{ color: textMuted }}>
-                    {tokens.usedTokens.toLocaleString()} used ({usedPct}%)
-                  </div>
-                </>
+              {chartPoints.length > 0 ? (
+                <ScoreChart points={chartPoints} isDark={isDark} onSelect={selectInterview} />
               ) : (
-                <p className="text-sm" style={{ color: textMuted }}>
-                  No token data available.
-                </p>
+                <div
+                  className="flex h-[260px] flex-col items-center justify-center gap-2 rounded-xl text-center"
+                  style={{ background: panelAlt, color: textMuted }}
+                >
+                  <Activity size={20} />
+                  <p className="text-sm">
+                    {scored.length === 0
+                      ? "Finish an interview to see your score trend here."
+                      : "No scored interviews in this range."}
+                  </p>
+                </div>
               )}
             </div>
 
             {/* Interviews + messages */}
-            <div className="fade-in grid grid-cols-1 gap-6 lg:grid-cols-5" style={{ animationDelay: "0.1s" }}>
+            <div
+              ref={transcriptRef}
+              className="fade-in grid scroll-mt-6 grid-cols-1 gap-6 lg:grid-cols-5"
+              style={{ animationDelay: "0.2s" }}
+            >
               {/* Interview list */}
               <div
                 className="lg:col-span-2 flex flex-col rounded-2xl overflow-hidden"
@@ -270,7 +433,21 @@ export default function AboutPage() {
                             <span>{interview.messageCount} messages</span>
                           </div>
                         </div>
-                        <ChevronRight size={16} style={{ color: textMuted }} />
+                        <div className="flex flex-shrink-0 items-center gap-2">
+                          {interview.status === "Ended" && typeof interview.score === "number" ? (
+                            <span
+                              className="rounded-md px-2 py-0.5 text-xs font-semibold tabular-nums"
+                              style={{ background: isSelected ? panel : panelAlt }}
+                            >
+                              {interview.score}
+                            </span>
+                          ) : interview.status ? (
+                            <span className="text-xs" style={{ color: textMuted }}>
+                              {interview.status === "Marking" ? "Scoring…" : "Not scored"}
+                            </span>
+                          ) : null}
+                          <ChevronRight size={16} style={{ color: textMuted }} />
+                        </div>
                       </button>
                     );
                   })}
