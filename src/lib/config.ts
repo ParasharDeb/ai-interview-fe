@@ -1,9 +1,8 @@
-
-console.log(import.meta.env)
-export const BACKEND_URL =
-  "https://ai-interviewer-1xg1.onrender.com"
+export const BACKEND_URL = (
+  import.meta.env.VITE_BACKEND_URL ?? "https://ai-interviewer-vn4n.onrender.com"
+).replace(/\/$/, "")
 export const WS_URL =
-  "wss://ai-interviewer-1-a4d5.onrender.com"
+  import.meta.env.VITE_WS_URL ?? "wss://ai-interviewer-1-a4d5.onrender.com"
 
 export function toWebSocketUrl(baseUrl: string): string {
   const trimmed = baseUrl.replace(/\/$/, "");
